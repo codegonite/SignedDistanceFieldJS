@@ -17,6 +17,126 @@ const STL_BYTES_PER_TRIANGLE = 50;
 
 const INTERSECTION_DEPTH_MAX = 256;
 
+const INV_SQRT2 = Math.sqrt(0.5);
+const ONE_MINUS_INV_SQRT2 = 1.0 - INV_SQRT2;
+const LOG2 = Math.log(2);
+
+function smoothMinExp(a, b, k) {
+    const exp2a = Math.pow(2, -a / k);
+    const exp2b = Math.pow(2, -b / k);
+    const r = exp2a + exp2b;
+    return -k * Math.log2(r);
+}
+
+function smoothMinRoot(a, b, k) {
+    const k2 = k * 2.0;
+    const x = b - a;
+    const sqrtTerm = Math.sqrt(x * x + k2 * k2);
+    return 0.5 * (a + b - sqrtTerm);
+}
+
+function smoothMinSigmoid(a, b, k) {
+    const kLog2 = k * LOG2;
+    const x = b - a;
+    const exp2Term = Math.pow(2, x / kLog2);
+    return a + x / (1.0 - exp2Term);
+}
+
+function smoothMinQuadratic(a, b, k) {
+    const k4 = k * 4.0;
+    const absDiff = Math.abs(a - b);
+    const h = Math.max(k4 - absDiff, 0.0) / k4;
+    return Math.min(a, b) - h * h * k4 * (1.0 / 4.0);
+}
+
+function smoothMinCubic(a, b, k) {
+    const k6 = k * 6.0;
+    const absDiff = Math.abs(a - b);
+    const h = Math.max(k6 - absDiff, 0.0) / k6;
+    return Math.min(a, b) - h * h * h * k6 * (1.0 / 6.0);
+}
+
+function smoothMinQuartic(a, b, k) {
+    const k16_3 = k * (16.0 / 3.0);
+    const absDiff = Math.abs(a - b);
+    const h = Math.max(k16_3 - absDiff, 0.0) / k16_3;
+    return Math.min(a, b) - h * h * h * (4.0 - h) * k16_3 * (1.0 / 16.0);
+}
+
+function smoothMinCircular(a, b, k) {
+    const kAdjusted = k / ONE_MINUS_INV_SQRT2;
+    const absDiff = Math.abs(a - b);
+    const h = Math.max(kAdjusted - absDiff, 0.0) / kAdjusted;
+    const sqrtTerm = Math.sqrt(1.0 - h * (h - 2.0));
+    return Math.min(a, b) - kAdjusted * 0.5 * (1.0 + h - sqrtTerm);
+}
+
+function smoothMinCircularGeometrical(a, b, k) {
+    const kAdjusted = k / ONE_MINUS_INV_SQRT2;
+    const dx = Math.max(kAdjusted - a, 0.0);
+    const dy = Math.max(kAdjusted - b, 0.0);
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    return Math.max(kAdjusted, Math.min(a, b)) - dist;
+}
+
+function smoothMaxExp(a, b, k) {
+    const exp2a = Math.pow(2, a / k);
+    const exp2b = Math.pow(2, b / k);
+    const r = exp2a + exp2b;
+    return k * Math.log2(r);
+}
+
+function smoothMaxRoot(a, b, k) {
+    const k2 = k * 2.0;
+    const x = a - b;
+    const sqrtTerm = Math.sqrt(x * x + k2 * k2);
+    return 0.5 * (a + b + sqrtTerm);
+}
+
+function smoothMaxSigmoid(a, b, k) {
+    const kLog2 = k * LOG2;
+    const x = a - b;
+    const exp2Term = Math.pow(2, x / kLog2);
+    return a - x / (1.0 - exp2Term);
+}
+
+function smoothMaxQuadratic(a, b, k) {
+    const k4 = k * 4.0;
+    const absDiff = Math.abs(b - a);
+    const h = Math.max(k4 - absDiff, 0.0) / k4;
+    return Math.max(a, b) + h * h * k4 * (1.0 / 4.0);
+}
+
+function smoothMaxCubic(a, b, k) {
+    const k6 = k * 6.0;
+    const absDiff = Math.abs((-a) + b);
+    const h = Math.max(k6 - absDiff, 0.0) / k6;
+    return Math.max(a, b) + h * h * h * k6 * (1.0 / 6.0);
+}
+
+function smoothMaxQuartic(a, b, k) {
+    const k16_3 = k * (16.0 / 3.0);
+    const absDiff = Math.abs((-a) + b);
+    const h = Math.max(k16_3 - absDiff, 0.0) / k16_3;
+    return Math.max(a, b) + h * h * h * (4.0 - h) * k16_3 * (1.0 / 16.0);
+}
+
+function smoothMaxCircular(a, b, k) {
+    const kAdjusted = k / ONE_MINUS_INV_SQRT2;
+    const absDiff = Math.abs((-a) + b);
+    const h = Math.max(kAdjusted - absDiff, 0.0) / kAdjusted;
+    const sqrtTerm = Math.sqrt(1.0 - h * (h - 2.0));
+    return Math.max(a, b) + kAdjusted * 0.5 * (1.0 + h - sqrtTerm);
+}
+
+function smoothMaxCircularGeometrical(a, b, k) {
+    const kAdjusted = k / ONE_MINUS_INV_SQRT2;
+    const dx = Math.max(kAdjusted + a, 0.0);
+    const dy = Math.max(kAdjusted + b, 0.0);
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    return -Math.max(kAdjusted, -Math.max(a, b)) + dist;
+}
+
 export class Vector2 {
     static fromObject(v) { return new Vector2(v.x, v.y); }
     static fromArray(v)  { return new Vector2(v[0], v[1]); }
@@ -2429,9 +2549,14 @@ export function distanceFromOrigin(x, y, z) {
     return Math.sqrt(x*x + y*y + z*z);
 }
 
-export function distanceSquared(x0, y0, z0, x1, y1, z1) {
+export function distanceSquaredBetweenPoints(x0, y0, z0, x1, y1, z1) {
     const dx = x1 - x0, dy = y1 - y0, dz = z1 - z0;
     return dx * dx + dy * dy + dz * dz;
+}
+
+export function distanceBetweenPoints(x0, y0, z0, x1, y1, z1) {
+    const dx = x1 - x0, dy = y1 - y0, dz = z1 - z0;
+    return Math.sqrt(dx * dx + dy * dy + dz * dz);
 }
 
 export class Vertex {
@@ -2787,23 +2912,33 @@ export class SampleOctreeLeaf {
         if (node_state == ALL_SAMPLES_INSIDE) { return _SAMPLE_OCTREE_FULL; }
         if (node_state == ALL_SAMPLES_OUTSIDE) { return _SAMPLE_OCTREE_EMPTY; }
 
-        const position = this.calculateSurfacePosition();
+        const position = this.calculateSurfacePosition(field);
         const normal = field.calculateGradient(position.x, position.y, position.z).normalize();
         this.surface_vertex = new Vertex(position, normal);
         return this;
     }
         
-    calculateSurfacePosition() {
+    calculateSurfacePosition(field) {
         const edges = this.getTemporaryEdges();
 
         let x = 0, y = 0, z = 0, intersection_count = 0;
         for (let idx = 0; idx < edges.length; ++idx) {
             const edge = edges[idx];
+            const dx = edge.x1 - edge.x0;
+            const dy = edge.y1 - edge.y0;
+            const dz = edge.z1 - edge.z0;
+            const distance = Math.sqrt(dx*dx + dy*dy + dz*dz);
+            const normal_x = dx / distance;
+            const normal_y = dy / distance;
+            const normal_z = dz / distance;
+            
             if ((edge.sample0 < 0) != (edge.sample1 < 0)) {
-                const t = Math.abs(edge.sample0) / (Math.abs(edge.sample0) + Math.abs(edge.sample1));
-                x += (edge.x1 - edge.x0) * t + edge.x0;
-                y += (edge.y1 - edge.y0) * t + edge.y0;
-                z += (edge.z1 - edge.z0) * t + edge.z0;
+                // const t = Math.abs(edge.sample0) / (Math.abs(edge.sample0) + Math.abs(edge.sample1));
+                const raycast_distance = field.raycast(edge.x0, edge.y0, edge.z0, normal_x, normal_y, normal_z);
+                const t = raycast_distance / distance;
+                x += dx * t + edge.x0;
+                y += dy * t + edge.y0;
+                z += dz * t + edge.z0;
                 intersection_count += 1;
             }
         }
@@ -2858,8 +2993,6 @@ export class SampleOctreeMeshBuilder {
     getMesh() {
         return new TriangleMesh(this.vertices, this.indices);
     }
-
-    
 
     clear() {
         this.vertices = [];
@@ -3297,13 +3430,212 @@ export function convertToOBJ(mesh) {
     return output;
 }
 
+export class SignedDistanceField2 {
+    calculateSignedDistance(x, y) {
+        throw new Error("calculateSignedDistance is unimplemented!");
+    }
+
+    calculateGradient(x, y, out_vector = new Vector2()) {
+        const distance_max_x = this.calculateSignedDistance(x + EPSILON, y);
+        const distance_min_x = this.calculateSignedDistance(x - EPSILON, y);
+        const distance_max_y = this.calculateSignedDistance(x, y + EPSILON);
+        const distance_min_y = this.calculateSignedDistance(x, y - EPSILON);
+        return out_vector.set((distance_max_x - distance_min_x) * INV_TWO_EPSILON,
+                              (distance_max_y - distance_min_y) * INV_TWO_EPSILON);
+    }
+    
+    raycast(x0, y0, dx, dy, distance_max = Infinity) {
+        let total_distance = 0;
+        for (let idx = 0; idx < INTERSECTION_DEPTH_MAX && total_distance < distance_max; ++idx) {
+            const radius = Math.abs(this.calculateSignedDistance(
+                x0 + total_distance * dx,
+                y0 + total_distance * dy));
+
+            if (radius < EPSILON) {
+                return total_distance;
+            }
+            
+            total_distance += radius;
+        }
+
+        return null;
+    }
+    
+    transform(matrix = new Matrix3()) { return new TransformSignedDistanceField2(this, matrix); }
+    shell(thickness = 1) { return new ShellSignedDistanceField2(this, thickness); }
+    offset(distance = 1) { return new OffsetSignedDistanceField2(this, distance); }
+    union(... fields) { return new UnionSignedDistanceField2([ this, ... fields ]); }
+    difference(... fields) { return new DifferenceSignedDistanceField2([ this, ... fields ]); }
+    intersection(... fields) { return new IntersectionSignedDistanceField2([ this, ... fields ]); }
+    unionSmooth(smoothness = 0, ... fields) { return new UnionSmoothSignedDistanceField2(smoothness, [ this, ... fields ]); }
+    differenceSmooth(smoothness = 0, ... fields) { return new DifferenceSmoothSignedDistanceField2(smoothness, [ this, ... fields ]); }
+    intersectionSmooth(smoothness = 0, ... fields) { return new IntersectionSmoothSignedDistanceField2(smoothness, [ this, ... fields ]); }
+
+    translate(x = 0, y = 0) { return this.transform(_m3_temp.identity().translate(x, y)); }
+    rotate(angle = 0) { return this.transform(_m3_temp.identity().rotateZ(angle)); }
+}
+
+export class TransformSignedDistanceField2 extends SignedDistanceField2 {
+    constructor(field, matrix = new Matrix3()) {
+        super();
+        this.inverse_matrix = matrix.clone().inverse();
+        this.bounding_box = field.bounding_box.clone().transformMatrix3(matrix);
+        this.field = field;
+    }
+
+    calculateSignedDistance(x, y) {
+        _v2_temp.set(x, y).transformMatrix3(this.inverse_matrix);
+        return this.field.calculateSignedDistance(_v2_temp.x, _v2_temp.y);
+    }
+}
+
+export class ShellSignedDistanceField2 extends SignedDistanceField2 {
+    constructor(field, thickness) {
+        super();
+        this.bounding_box = field.bounding_box.clone().grow(this.half_thickness);
+        this.half_thickness = 0.5 * thickness;
+        this.field = field;
+    }
+
+    calculateSignedDistance(x, y) {
+        return Math.abs(this.field.calculateSignedDistance(x, y)) - this.half_thickness;
+    }
+}
+
+export class OffsetSignedDistanceField2 extends SignedDistanceField2 {
+    constructor(field, distance) {
+        super();
+        this.bounding_box = field.bounding_box.clone().grow(this.distance);
+        this.distance = distance;
+        this.field = field;
+    }
+
+    calculateSignedDistance(x, y) {
+        return this.field.calculateSignedDistance(x, y) - this.distance;
+    }
+}
+
+export class UnionSignedDistanceField2 extends SignedDistanceField2 {
+    constructor(fields = []) {
+        super();
+        this.fields = fields;
+        this.bounding_box = this.fields[0].bounding_box.clone();
+        for (let idx = 1; idx < this.fields.length; ++idx) {
+            this.bounding_box.union(this.fields[idx].bounding_box);
+        }
+    }
+
+    calculateSignedDistance(x, y) {
+        let distance = this.fields[0].calculateSignedDistance(x, y);
+        for (let idx = 1; idx < this.fields.length; ++idx) {
+            distance = Math.min(distance, this.fields[idx].calculateSignedDistance(x, y));
+        }
+        return distance;
+    }
+}
+
+export class DifferenceSignedDistanceField2 extends SignedDistanceField2 {
+    constructor(fields = []) {
+        super();
+        this.fields = fields;
+        this.bounding_box = this.fields[0].bounding_box.clone();
+    }
+
+    calculateSignedDistance(x, y) {
+        let distance = this.fields[0].calculateSignedDistance(x, y);
+        for (let idx = 1; idx < this.fields.length; ++idx) {
+            distance = Math.max(distance, -this.fields[idx].calculateSignedDistance(x, y));
+        }
+        return distance;
+    }
+}
+
+export class IntersectionSignedDistanceField2 extends SignedDistanceField2 {
+    constructor(fields = []) {
+        super();
+        this.fields = fields;
+        this.bounding_box = this.fields[0].bounding_box.clone();
+        for (let idx = 1; idx < this.fields.length; ++idx) {
+            this.bounding_box.intersect(this.fields[idx].bounding_box);
+        }
+    }
+
+    calculateSignedDistance(x, y) {
+        let distance = this.fields[0].calculateSignedDistance(x, y);
+        for (let idx = 1; idx < this.fields.length; ++idx) {
+            distance = Math.max(distance, this.fields[idx].calculateSignedDistance(x, y));
+        }
+        return distance;
+    }
+}
+
+export class UnionSmoothSignedDistanceField2 extends SignedDistanceField2 {
+    constructor(fields = []) {
+        super();
+        this.fields = fields;
+        this.bounding_box = this.fields[0].bounding_box.clone();
+        this.smoothing_method = SMOOTHING_METHOD_CIRCULAR_GEOMETRICAL;
+        for (let idx = 1; idx < this.fields.length; ++idx) {
+            this.bounding_box.union(this.fields[idx].bounding_box);
+        }
+    }
+
+    setSmoothingMethod(method) { this.smoothing_method = method; return this; }
+    calculateSignedDistance(x, y) {
+        let distance = this.fields[0].calculateSignedDistance(x, y);
+        for (let idx = 1; idx < this.fields.length; ++idx) {
+            distance = this.smoothing_method.min(distance, this.fields[idx].calculateSignedDistance(x, y), this.smoothness);
+        }
+        return distance;
+    }
+}
+
+export class DifferenceSmoothSignedDistanceField2 extends SignedDistanceField2 {
+    constructor(fields = []) {
+        super();
+        this.fields = fields;
+        this.bounding_box = this.fields[0].bounding_box.clone();
+        this.smoothing_method = SMOOTHING_METHOD_CIRCULAR_GEOMETRICAL;
+    }
+
+    setSmoothingMethod(method) { this.smoothing_method = method; return this; }
+    calculateSignedDistance(x, y) {
+        let distance = this.fields[0].calculateSignedDistance(x, y);
+        for (let idx = 1; idx < this.fields.length; ++idx) {
+            distance = this.smoothing_method.max(distance, this.fields[idx].calculateSignedDistance(x, y), this.smoothness);
+        }
+        return distance;
+    }
+}
+
+export class IntersectionSmoothSignedDistanceField2 extends SignedDistanceField2 {
+    constructor(fields = []) {
+        super();
+        this.fields = fields;
+        this.bounding_box = this.fields[0].bounding_box.clone();
+        this.smoothing_method = SMOOTHING_METHOD_CIRCULAR_GEOMETRICAL;
+        this.k = 0;
+        for (let idx = 1; idx < this.fields.length; ++idx) {
+            this.bounding_box.intersect(this.fields[idx].bounding_box);
+        }
+    }
+
+    setSmoothingMethod(method) { this.smoothing_method = method; return this; }
+    calculateSignedDistance(x, y) {
+        let distance = this.fields[0].calculateSignedDistance(x, y);
+        for (let idx = 1; idx < this.fields.length; ++idx) {
+            distance = this.smoothing_method.max(distance, this.fields[idx].calculateSignedDistance(x, y), this.smoothness);
+        }
+        return distance;
+    }
+}
+
 export class SignedDistanceField3 {
     calculateSignedDistance(x, y, z) {
         throw new Error("calculateSignedDistance is unimplemented!");
     }
 
     calculateGradient(x, y, z, out_vector = new Vector3()) {
-        const EPSILON = 0.00001;
         const sample0 = this.calculateSignedDistance(x + EPSILON, y - EPSILON, z - EPSILON);
         const sample1 = this.calculateSignedDistance(x - EPSILON, y - EPSILON, z + EPSILON);
         const sample2 = this.calculateSignedDistance(x - EPSILON, y + EPSILON, z - EPSILON);
@@ -3316,73 +3648,17 @@ export class SignedDistanceField3 {
     }
 
     raycast(x0, y0, z0, dx, dy, dz, distance_max = Infinity) {
-        let total_distance = 0;
-        for (let idx = 0; idx < INTERSECTION_DEPTH_MAX && total_distance < distance_max; ++idx) {
-            const radius = this.calculateSignedDistance(
+        for (let idx = 0, total_distance = 0; idx < INTERSECTION_DEPTH_MAX && total_distance < distance_max; ++idx) {
+            const radius = Math.abs(this.calculateSignedDistance(
                 x0 + total_distance * dx,
                 y0 + total_distance * dy,
-                z0 + total_distance * dz);
+                z0 + total_distance * dz));
 
             if (radius < EPSILON) {
                 return total_distance;
             }
             
             total_distance += radius;
-        }
-
-        return null;
-    }
-
-    raycastIntersection(x0, y0, z0, x1, y1, z1, out = new Vector3()) {
-        const sample0 = this.calculateSignedDistance(x0, y0, z0);
-        const sample1 = this.calculateSignedDistance(x1, y1, z1);
-
-        if ((sample0 < 0) == (sample1 < 0)) {
-            return null;
-        }
-
-        if (sample0 < 0) {
-            [ x0, y0, z0, x1, y1, z1 ] = [ x1, y1, z1, x0, y0, z0 ];
-        }
-
-        const dx = x1 - x0;
-        const dy = y1 - y0;
-        const dz = z1 - z0;
-
-        const length = Math.sqrt(dx*dx + dy*dy + dz*dz)
-        
-        if (length == 0) {
-            return null;
-        }
-
-        const inv = 1 / length;
-        const normal_x = dx * inv;
-        const normal_y = dy * inv;
-        const normal_z = dz * inv;
-
-        const distance = this.raycast(x0, y0, z0, normal_x, normal_y, normal_z, length);
-
-        if (distance != null) {
-            return out.set(x0 + distance * normal_x,
-                           y0 + distance * normal_y,
-                           z0 + distance * normal_z);
-        }
-
-        return null;
-    }
-
-    _raycastIntersection(x0, y0, z0, x1, y1, z1, out = new Vector3()) {
-        const dx = x1 - x0, dy = y1 - y0, dz = z1 - z0;
-        const inv = 1 / Math.sqrt(dx*dx + dy*dy + dz*dz);
-        const nx = dx * inv, ny = dy * inv, nz = dz * inv;
-
-        for (let idx = 0; idx < INTERSECTION_DEPTH_MAX; ++idx) {
-            const sphere_distance = this.calculateSignedDistance(x0, y0, z0);
-            const positive_sphere_distance = Math.abs(sphere_distance);
-
-            x0 += nx * positive_sphere_distance;
-            y0 += ny * positive_sphere_distance;
-            z0 += nz * positive_sphere_distance;
         }
 
         return null;
@@ -3524,9 +3800,8 @@ export class PlaneSignedDistanceField3 extends SignedDistanceField3 {
 export class TransformSignedDistanceField3 extends SignedDistanceField3 {
     constructor(field, matrix = new Matrix4()) {
         super();
-        this.matrix = matrix.clone();
-        this.inverse_matrix = this.matrix.clone().inverse();
-        this.bounding_box = field.bounding_box.clone().transformMatrix4(this.matrix);
+        this.inverse_matrix = matrix.clone().inverse();
+        this.bounding_box = field.bounding_box.clone().transformMatrix4(matrix);
         this.field = field;
     }
 
@@ -3636,29 +3911,25 @@ export class IntersectionSignedDistanceField3 extends SignedDistanceField3 {
     }
 }
 
-
 export class UnionSmoothSignedDistanceField3 extends SignedDistanceField3 {
     constructor(smoothness, fields) {
         super();
         this.smoothness = smoothness;
         this.fields = fields;
         this.bounding_box = this.fields[0].bounding_box.clone();
+        this.smoothing_method = SMOOTHING_METHOD_QUADRATIC;
         for (let idx = 1; idx < this.fields.length; ++idx) {
             this.bounding_box.union(this.fields[idx].bounding_box);
         }
     }
 
+    setSmoothingMethod(method) { this.smoothing_method = method; return this; }
     calculateSignedDistance(x, y, z) {
-        let distance0 = this.fields[0].calculateSignedDistance(x, y, z);
-
+        let distance = this.fields[0].calculateSignedDistance(x, y, z);
         for (let idx = 1; idx < this.fields.length; ++idx) {
-            let distance1 = this.fields[idx].calculateSignedDistance(x, y, z);
-            let h = clamp(0.5 + 0.5 * (distance1 - distance0) / this.smoothness, 0, 1);
-            let m = distance1 + (distance0 - distance1) * h;
-            distance0 = m - this.smoothness * h * (1 - h);
+            distance = this.smoothing_method.min(distance, this.fields[idx].calculateSignedDistance(x, y, z), this.smoothness);
         }
-
-        return distance0;
+        return distance;
     }
 }
 
@@ -3668,19 +3939,16 @@ export class DifferenceSmoothSignedDistanceField3 extends SignedDistanceField3 {
         this.smoothness = smoothness;
         this.fields = fields;
         this.bounding_box = this.fields[0].bounding_box.clone();
+        this.smoothing_method = SMOOTHING_METHOD_QUADRATIC;
     }
 
+    setSmoothingMethod(method) { this.smoothing_method = method; return this; }
     calculateSignedDistance(x, y, z) {
-        let distance0 = this.fields[0].calculateSignedDistance(x, y, z);
-
+        let distance = this.fields[0].calculateSignedDistance(x, y, z);
         for (let idx = 1; idx < this.fields.length; ++idx) {
-            let distance1 = this.fields[idx].calculateSignedDistance(x, y, z);
-            let h = clamp(0.5 - 0.5 * (distance1 + distance0) / this.smoothness, 0, 1);
-            let m = distance0 + (-distance1 - distance0) * h;
-            distance0 = m + this.smoothness * h * (1 - h);
+            distance = this.smoothing_method.max(distance, -this.fields[idx].calculateSignedDistance(x, y, z), this.smoothness);
         }
-
-        return distance0;
+        return distance;
     }
 }
 
@@ -3690,24 +3958,40 @@ export class IntersectionSmoothSignedDistanceField3 extends SignedDistanceField3
         this.smoothness = smoothness;
         this.fields = fields;
         this.bounding_box = this.fields[0].bounding_box.clone();
+        this.smoothing_method = SMOOTHING_METHOD_QUADRATIC;
         for (let idx = 1; idx < this.fields.length; ++idx) {
             this.bounding_box.intersect(this.fields[idx].bounding_box);
         }
     }
 
+    setSmoothingMethod(method) { this.smoothing_method = method; return this; }
     calculateSignedDistance(x, y, z) {
-        let distance0 = this.fields[0].calculateSignedDistance(x, y, z);
-
+        let distance = this.fields[0].calculateSignedDistance(x, y, z);
         for (let idx = 1; idx < this.fields.length; ++idx) {
-            let distance1 = this.fields[idx].calculateSignedDistance(x, y, z);
-            let h = clamp(0.5 - 0.5 * (distance1 - distance0) / this.smoothness, 0, 1);
-            let m = distance1 + (distance0 - distance1) * h;
-            distance0 = m + this.smoothness * h * (1 - h);
+            distance = this.smoothing_method.max(distance, this.fields[idx].calculateSignedDistance(x, y, z), this.smoothness);
         }
-
-        return distance0;
+        return distance;
     }
 }
+
+export const SMOOTHING_METHOD_NONE = { min(a, b, k) { return Math.min(a, b); }, max(a, b, k) { return Math.max(a, b); } }
+// export const SMOOTHING_METHOD_EXP = { min: smoothMinExp, max(a, b, k) { return -smoothMinExp(-a, -b, k); } };
+// export const SMOOTHING_METHOD_ROOT = { min: smoothMinRoot, max(a, b, k) { return -smoothMinRoot(-a, -b, k); } };
+// export const SMOOTHING_METHOD_SIGMOID = { min: smoothMinSigmoid, max(a, b, k) { return -smoothMinSigmoid(-a, -b, k); } };
+// export const SMOOTHING_METHOD_QUADRATIC = { min: smoothMinQuadratic, max(a, b, k) { return -smoothMinQuadratic(-a, -b, k); } };
+// export const SMOOTHING_METHOD_CUBIC = { min: smoothMinCubic, max(a, b, k) { return -smoothMinCubic(-a, -b, k); } };
+// export const SMOOTHING_METHOD_QUARTIC = { min: smoothMinQuartic, max(a, b, k) { return -smoothMinQuartic(-a, -b, k); } };
+// export const SMOOTHING_METHOD_CIRCULAR = { min: smoothMinCircular, max(a, b, k) { return -smoothMinCircular(-a, -b, k); } };
+// export const SMOOTHING_METHOD_CIRCULAR_GEOMETRICAL = { min: smoothMinCircularGeometrical, max(a, b, k) { return -smoothMinCircularGeometrical(-a, -b, k); } };
+
+export const SMOOTHING_METHOD_EXP = { min: smoothMinExp, max: smoothMaxExp };
+export const SMOOTHING_METHOD_ROOT = { min: smoothMinRoot, max: smoothMaxRoot };
+export const SMOOTHING_METHOD_SIGMOID = { min: smoothMinSigmoid, max: smoothMaxSigmoid };
+export const SMOOTHING_METHOD_QUADRATIC = { min: smoothMinQuadratic, max: smoothMaxQuadratic };
+export const SMOOTHING_METHOD_CUBIC = { min: smoothMinCubic, max: smoothMaxCubic };
+export const SMOOTHING_METHOD_QUARTIC = { min: smoothMinQuartic, max: smoothMaxQuartic };
+export const SMOOTHING_METHOD_CIRCULAR = { min: smoothMinCircular, max: smoothMaxCircular };
+export const SMOOTHING_METHOD_CIRCULAR_GEOMETRICAL = { min: smoothMinCircularGeometrical, max: smoothMaxCircularGeometrical };
 
 export function box(size_x = 20, size_y = 20, size_z = 20, corner_radius = 0) { return new BoxSignedDistanceField3(size_x, size_y, size_z, corner_radius); }
 export function boxFrame(size_x = 20, size_y = 20, size_z = 20, frame_size = 5) { return new BoxFrameSignedDistanceField3(size_x, size_y, size_z, frame_size); }
@@ -3715,22 +3999,14 @@ export function sphere(radius = 5) { return new SphereSignedDistanceField3(radiu
 export function torus(radius_outer = 20, radius_inner = 5) { return new TorusSignedDistanceField3(radius_outer, radius_inner); }
 export function cylinder(radius = 10, height = Infinity) { return new CylinderSignedDistanceField3(radius, height); }
 export function plane(plane_ = new Plane()) { return new PlaneSignedDistanceField3(plane_); }
-export function transform(field, matrix = new Matrix4()) { return new TransformSignedDistanceField3(field, matrix); }
-export function twist(field, angle) { return new TwistSignedDistanceField3(field, angle); }
-export function shell(field, thickness) { return new ShellSignedDistanceField3(field, thickness); }
-export function offset(field, distance) { return new OffsetSignedDistanceField3(field, distance); }
-export function union(... fields) { return new UnionSignedDistanceField3(fields); }
-export function difference(... fields) { return new DifferenceSignedDistanceField3(fields); }
-export function intersection(... fields) { return new IntersectionSignedDistanceField3(fields); }
-export function unionSmooth(smoothness, ... fields) { return new UnionSmoothSignedDistanceField3(smoothness, fields); }
-export function differenceSmooth(smoothness, ... fields) { return new DifferenceSmoothSignedDistanceField3(smoothness, fields); }
-export function intersectionSmooth(smoothness, ... fields) { return new IntersectionSmoothSignedDistanceField3(smoothness, fields); }
 
 const _SAMPLE_OCTREE_FULL = new SampleOctreeFull();
 const _SAMPLE_OCTREE_EMPTY = new SampleOctreeEmpty();
 const temp_plane = new Plane();
+const _m3_temp = new Matrix3();
 const _m4_temp = new Matrix4();
 const _v3_temp = new Vector3(0, 0, 0);
+const _v2_temp = new Vector2(0, 0, 0);
 
 const _temp_edges = [
     new SampleEdge(0, 0, 0, 0, 0, 0, 0, 0),

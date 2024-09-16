@@ -1,6 +1,6 @@
 {
   "name": "sdfjs",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "\"A signed distance field 3D modeler using JavaScript.\"",
   "main": "index.js",
   "directories": {
