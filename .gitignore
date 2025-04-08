@@ -1,3 +1,6 @@
+*.zip
+*.stl
+*.3mf
 *.obj
 *.log
 models
