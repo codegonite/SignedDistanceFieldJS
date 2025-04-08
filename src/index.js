@@ -1,5 +1,10 @@
-export const EPSILON = 1e-6;
-export const INV_TWO_EPSILON = 1 / (2 * EPSILON);
+// https://iquilezles.org/articles/distfunctions/
+// https://iquilezles.org/articles/distfunctions2d/
+// https://iquilezles.org/articles/smin/
+// https://iquilezles.org/articles/raymarchingdf/
+
+const EPSILON = 1e-6;
+const INV_TWO_EPSILON = 1 / (2 * EPSILON);
 
 const SAMPLE_OCTREE_KIND_FULL    = 0x01;
 const SAMPLE_OCTREE_KIND_EMPTY   = 0x02;
@@ -21,49 +26,63 @@ const INV_SQRT2 = Math.sqrt(0.5);
 const ONE_MINUS_INV_SQRT2 = 1.0 - INV_SQRT2;
 const LOG2 = Math.log(2);
 
-function smoothMinExp(a, b, k) {
+export function clamp(value, min, max) {
+    if (value > max) return max;
+    if (value < min) return min;
+    return value;
+}
+
+export function lerp(a, b, t) {
+    return (b - a) * t + a;
+}
+
+export function distanceFromOrigin(x, y, z) {
+    return Math.sqrt(x*x + y*y + z*z);
+}
+
+export function smoothMinExp(a, b, k) {
     const exp2a = Math.pow(2, -a / k);
     const exp2b = Math.pow(2, -b / k);
     const r = exp2a + exp2b;
     return -k * Math.log2(r);
 }
 
-function smoothMinRoot(a, b, k) {
+export function smoothMinRoot(a, b, k) {
     const k2 = k * 2.0;
     const x = b - a;
     const sqrtTerm = Math.sqrt(x * x + k2 * k2);
     return 0.5 * (a + b - sqrtTerm);
 }
 
-function smoothMinSigmoid(a, b, k) {
+export function smoothMinSigmoid(a, b, k) {
     const kLog2 = k * LOG2;
     const x = b - a;
     const exp2Term = Math.pow(2, x / kLog2);
     return a + x / (1.0 - exp2Term);
 }
 
-function smoothMinQuadratic(a, b, k) {
+export function smoothMinQuadratic(a, b, k) {
     const k4 = k * 4.0;
     const absDiff = Math.abs(a - b);
     const h = Math.max(k4 - absDiff, 0.0) / k4;
     return Math.min(a, b) - h * h * k4 * (1.0 / 4.0);
 }
 
-function smoothMinCubic(a, b, k) {
+export function smoothMinCubic(a, b, k) {
     const k6 = k * 6.0;
     const absDiff = Math.abs(a - b);
     const h = Math.max(k6 - absDiff, 0.0) / k6;
     return Math.min(a, b) - h * h * h * k6 * (1.0 / 6.0);
 }
 
-function smoothMinQuartic(a, b, k) {
+export function smoothMinQuartic(a, b, k) {
     const k16_3 = k * (16.0 / 3.0);
     const absDiff = Math.abs(a - b);
     const h = Math.max(k16_3 - absDiff, 0.0) / k16_3;
     return Math.min(a, b) - h * h * h * (4.0 - h) * k16_3 * (1.0 / 16.0);
 }
 
-function smoothMinCircular(a, b, k) {
+export function smoothMinCircular(a, b, k) {
     const kAdjusted = k / ONE_MINUS_INV_SQRT2;
     const absDiff = Math.abs(a - b);
     const h = Math.max(kAdjusted - absDiff, 0.0) / kAdjusted;
@@ -71,7 +90,7 @@ function smoothMinCircular(a, b, k) {
     return Math.min(a, b) - kAdjusted * 0.5 * (1.0 + h - sqrtTerm);
 }
 
-function smoothMinCircularGeometrical(a, b, k) {
+export function smoothMinCircularGeometrical(a, b, k) {
     const kAdjusted = k / ONE_MINUS_INV_SQRT2;
     const dx = Math.max(kAdjusted - a, 0.0);
     const dy = Math.max(kAdjusted - b, 0.0);
@@ -79,49 +98,49 @@ function smoothMinCircularGeometrical(a, b, k) {
     return Math.max(kAdjusted, Math.min(a, b)) - dist;
 }
 
-function smoothMaxExp(a, b, k) {
+export function smoothMaxExp(a, b, k) {
     const exp2a = Math.pow(2, a / k);
     const exp2b = Math.pow(2, b / k);
     const r = exp2a + exp2b;
     return k * Math.log2(r);
 }
 
-function smoothMaxRoot(a, b, k) {
+export function smoothMaxRoot(a, b, k) {
     const k2 = k * 2.0;
     const x = a - b;
     const sqrtTerm = Math.sqrt(x * x + k2 * k2);
     return 0.5 * (a + b + sqrtTerm);
 }
 
-function smoothMaxSigmoid(a, b, k) {
+export function smoothMaxSigmoid(a, b, k) {
     const kLog2 = k * LOG2;
     const x = a - b;
     const exp2Term = Math.pow(2, x / kLog2);
     return a - x / (1.0 - exp2Term);
 }
 
-function smoothMaxQuadratic(a, b, k) {
+export function smoothMaxQuadratic(a, b, k) {
     const k4 = k * 4.0;
     const absDiff = Math.abs(b - a);
     const h = Math.max(k4 - absDiff, 0.0) / k4;
     return Math.max(a, b) + h * h * k4 * (1.0 / 4.0);
 }
 
-function smoothMaxCubic(a, b, k) {
+export function smoothMaxCubic(a, b, k) {
     const k6 = k * 6.0;
     const absDiff = Math.abs((-a) + b);
     const h = Math.max(k6 - absDiff, 0.0) / k6;
     return Math.max(a, b) + h * h * h * k6 * (1.0 / 6.0);
 }
 
-function smoothMaxQuartic(a, b, k) {
+export function smoothMaxQuartic(a, b, k) {
     const k16_3 = k * (16.0 / 3.0);
     const absDiff = Math.abs((-a) + b);
     const h = Math.max(k16_3 - absDiff, 0.0) / k16_3;
     return Math.max(a, b) + h * h * h * (4.0 - h) * k16_3 * (1.0 / 16.0);
 }
 
-function smoothMaxCircular(a, b, k) {
+export function smoothMaxCircular(a, b, k) {
     const kAdjusted = k / ONE_MINUS_INV_SQRT2;
     const absDiff = Math.abs((-a) + b);
     const h = Math.max(kAdjusted - absDiff, 0.0) / kAdjusted;
@@ -129,12 +148,129 @@ function smoothMaxCircular(a, b, k) {
     return Math.max(a, b) + kAdjusted * 0.5 * (1.0 + h - sqrtTerm);
 }
 
-function smoothMaxCircularGeometrical(a, b, k) {
+export function smoothMaxCircularGeometrical(a, b, k) {
     const kAdjusted = k / ONE_MINUS_INV_SQRT2;
     const dx = Math.max(kAdjusted + a, 0.0);
     const dy = Math.max(kAdjusted + b, 0.0);
     const dist = Math.sqrt(dx * dx + dy * dy);
     return -Math.max(kAdjusted, -Math.max(a, b)) + dist;
+}
+
+function getHighestDepthNode(node0, node1, node2, node3) {
+    let lowest = node0.depth < node1.depth ? node0 : node1;
+    lowest = lowest.depth < node2.depth ? lowest : node2;
+    lowest = lowest.depth < node3.depth ? lowest : node3;
+    return lowest;
+}
+
+function interpolatePoint(field, min_x, min_y, min_z, max_x, max_y, max_z, x, y, z) {
+    const dx = (x - min_x) / (max_x - min_x), one_minus_dx = 1 - dx;
+    const dy = (y - min_y) / (max_y - min_y), one_minus_dy = 1 - dy;
+    const dz = (z - min_z) / (max_z - min_z), one_minus_dz = 1 - dz;
+
+    const c000 = field.calculateSignedDistance(min_x, min_y, min_z);
+    const c100 = field.calculateSignedDistance(max_x, min_y, min_z);
+    const c110 = field.calculateSignedDistance(max_x, max_y, min_z);
+    const c010 = field.calculateSignedDistance(min_x, max_y, min_z);
+    const c001 = field.calculateSignedDistance(min_x, min_y, max_z);
+    const c101 = field.calculateSignedDistance(max_x, min_y, max_z);
+    const c111 = field.calculateSignedDistance(max_x, max_y, max_z);
+    const c011 = field.calculateSignedDistance(min_x, max_y, max_z);
+
+    const x00 = c000 * one_minus_dx + c100 * dx;
+    const x01 = c001 * one_minus_dx + c101 * dx;
+    const x10 = c010 * one_minus_dx + c110 * dx;
+    const x11 = c011 * one_minus_dx + c111 * dx;
+
+    const y0 = x00 * one_minus_dy + x10 * dy;
+    const y1 = x01 * one_minus_dy + x11 * dy;
+
+    return y0 * one_minus_dz + y1 * dz;
+}
+
+export function triangulateSignedDistanceField(field, bounding_box = field.bounding_box, subdivision_count = 8, merge_threshold = 0.0005) {
+    const tree = new SampleOctreeRoot(
+        bounding_box.min_x,
+        bounding_box.min_y,
+        bounding_box.min_z,
+        bounding_box.max_x,
+        bounding_box.max_y,
+        bounding_box.max_z,
+    ).sampleSignedDistanceField(field, subdivision_count, merge_threshold);
+    const _builder = new SampleOctreeMeshBuilder();
+    _builder.processCell(tree);
+    return _builder.getMesh();
+}
+
+export function box(size_x = 20, size_y = 20, size_z = 20, corner_radius = 0) { return new BoxSignedDistanceField3(size_x, size_y, size_z, corner_radius); }
+export function boxFrame(size_x = 20, size_y = 20, size_z = 20, frame_size = 5) { return new BoxFrameSignedDistanceField3(size_x, size_y, size_z, frame_size); }
+export function sphere(radius = 5) { return new SphereSignedDistanceField3(radius); }
+export function torus(radius_outer = 20, radius_inner = 5) { return new TorusSignedDistanceField3(radius_outer, radius_inner); }
+export function cylinder(radius = 10, height = Infinity) { return new CylinderSignedDistanceField3(radius, height); }
+export function plane(plane_ = new Plane()) { return new PlaneSignedDistanceField3(plane_); }
+export function cone(radius, height) { return new ConeSignedDistanceField3(radius, height); }
+
+export function convertToSTL(mesh) {
+    if (mesh instanceof TriangleMesh == false) {
+        throw new Error("input mesh must be a 'TriangleMesh'!");
+    }
+
+    const triangle_count = mesh.indices.length / 3;
+    const buffer = new ArrayBuffer(STL_TRIANGLE_OFFSET + STL_BYTES_PER_TRIANGLE * triangle_count);
+    const view = new DataView(buffer);
+
+    view.setUint32(STL_HEADER_SIZE, triangle_count, true);
+
+    let offset = STL_HEADER_SIZE + 4;
+    for (let idx = 0; idx < mesh.indices.length; idx += 3) {
+        const position0 = mesh.vertices[mesh.indices[idx + 0]].position;
+        const position1 = mesh.vertices[mesh.indices[idx + 1]].position;
+        const position2 = mesh.vertices[mesh.indices[idx + 2]].position;
+
+        temp_plane.fromVectors(position0, position1, position2);
+
+        view.setFloat32(offset,      temp_plane.normal_x, true);
+        view.setFloat32(offset + 4,  temp_plane.normal_y, true);
+        view.setFloat32(offset + 8,  temp_plane.normal_z, true);
+
+        view.setFloat32(offset + 12, position0.x, true);
+        view.setFloat32(offset + 16, position0.y, true);
+        view.setFloat32(offset + 20, position0.z, true);
+
+        view.setFloat32(offset + 24, position1.x, true);
+        view.setFloat32(offset + 28, position1.y, true);
+        view.setFloat32(offset + 32, position1.z, true);
+
+        view.setFloat32(offset + 36, position2.x, true);
+        view.setFloat32(offset + 40, position2.y, true);
+        view.setFloat32(offset + 44, position2.z, true);
+
+        view.setUint16(offset + 48,  0, true);
+        offset += STL_BYTES_PER_TRIANGLE;
+    }
+
+    return new Uint8Array(buffer);
+}
+
+export function convertToOBJ(mesh) {
+    if (mesh instanceof TriangleMesh == false) {
+        throw new Error("input mesh must be a 'TriangleMesh'!");
+    }
+
+    let output = "";
+    for (let idx = 0; idx < mesh.vertices.length; ++idx) {
+        const position = mesh.vertices[idx].position;
+        output += `v ${position.x}, ${position.y}, ${position.z}\n`;
+    }
+
+    for (let idx = 0; idx < mesh.indices.length; idx += 3) {
+        const index0 = mesh.indices[idx + 0] + 1;
+        const index1 = mesh.indices[idx + 1] + 1;
+        const index2 = mesh.indices[idx + 2] + 1;
+        output += `f ${index0}, ${index1}, ${index2}\n`;
+    }
+
+    return output;
 }
 
 export class Vector2 {
@@ -2494,71 +2630,6 @@ export class Matrix4 {
     }
 }
 
-export function clamp(value, min, max) {
-    if (value > max) return max;
-    if (value < min) return min;
-    return value;
-}
-
-export function gcf(a, b) {
-    if (a < b) {
-        return gcf(b, a);
-    }
-
-    if (Math.abs(b) < 0.001) {
-        return a;
-    }
-
-    return gcf(b, a - Math.floor(a / b) * b);
-}
-
-export function lcm(a, b) {
-    return a * b / gcf(a, b);
-}
-
-export function lerp(a, b, t) {
-    return (b - a) * t + a;
-}
-
-export function smallestGridSize(size_x, size_y, size_z) {
-    return gcf(size_x, gcf(size_y, size_z));
-}
-
-export function closestEvenlyDivisibleGridSize(size_x, size_y, size_z, grid_size) {
-    if (size_x == size_y && size_x == size_z) {
-        const outside_volume = size_x / grid_size;
-        const inside_volume = Math.floor(outside_volume);
-        return (inside_volume / outside_volume) * grid_size;
-    }
-
-    const smallest_grid_size = gcf(size_x, gcf(size_y, size_z));
-
-    if (grid_size < smallest_grid_size) {
-        return Math.min(Math.floor(smallest_grid_size / grid_size), 1) * grid_size;
-    }
-
-    return Math.max(Math.floor(grid_size / smallest_grid_size), 1) * smallest_grid_size;
-}
-
-export function bestDivisibleGridSize(size_x, size_y, size_z, division_count) {
-    const grid_size = Math.max(size_x, size_y, size_z) / division_count;
-    return closestEvenlyDivisibleGridSize(size_x, size_y, size_z, grid_size);
-}
-
-export function distanceFromOrigin(x, y, z) {
-    return Math.sqrt(x*x + y*y + z*z);
-}
-
-export function distanceSquaredBetweenPoints(x0, y0, z0, x1, y1, z1) {
-    const dx = x1 - x0, dy = y1 - y0, dz = z1 - z0;
-    return dx * dx + dy * dy + dz * dz;
-}
-
-export function distanceBetweenPoints(x0, y0, z0, x1, y1, z1) {
-    const dx = x1 - x0, dy = y1 - y0, dz = z1 - z0;
-    return Math.sqrt(dx * dx + dy * dy + dz * dz);
-}
-
 export class Vertex {
     constructor(
         position = new Vector3(0, 0, 0),
@@ -2582,51 +2653,34 @@ export class TriangleMesh {
     }
 }
 
-export class PolygonIndices {
-    constructor(indices = [], plane = new Plane(), colour = null) {
-        this.indices = indices;
-        this.plane = plane;
-        this.colour = colour;
+class QEFSolver3 {
+    constructor() {
+        this.ata00 = 0;
+        this.ata10 = 0;
+        this.ata20 = 0;
+        this.ata11 = 0;
+        this.ata21 = 0;
+        this.ata22 = 0;
+        this.atb0 = 0;
+        this.atb1 = 0;
+        this.atb2 = 0;
+        this.btb  = 0;
     }
-}
 
-export class PolygonMesh {
-    constructor(vertices = [], faces = []) {
-        this.vertices = vertices;
-        this.faces = faces;
+    addIntersection(x, y, z, normal_x, normal_y, normal_z) {
+        const position_dot_normal = x * normal_x + y * normal_y + z * normal_z;
+
+        this.ata00 += normal_x * normal_x;
+        this.ata10 += 0;
+        this.ata20 += 0;
+        this.ata11 += 0;
+        this.ata21 += 0;
+        this.ata22 += 0;
+        this.atb0  += 0;
+        this.atb1  += 0;
+        this.atb2  += 0;
+        this.btb   += 0;
     }
-}
-
-function getLowestSubdivision(node0, node1, node2, node3) {
-    let lowest = node0.subdivision_count < node1.subdivision_count ? node0 : node1;
-    lowest = lowest.subdivision_count < node2.subdivision_count ? lowest : node2;
-    lowest = lowest.subdivision_count < node3.subdivision_count ? lowest : node3;
-    return lowest;
-}
-
-function interpolatePoint(field, min_x, min_y, min_z, max_x, max_y, max_z, x, y, z) {
-    const dx = (x - min_x) / (max_x - min_x), one_minus_dx = 1 - dx;
-    const dy = (y - min_y) / (max_y - min_y), one_minus_dy = 1 - dy;
-    const dz = (z - min_z) / (max_z - min_z), one_minus_dz = 1 - dz;
-
-    const c000 = field.calculateSignedDistance(min_x, min_y, min_z);
-    const c100 = field.calculateSignedDistance(max_x, min_y, min_z);
-    const c110 = field.calculateSignedDistance(max_x, max_y, min_z);
-    const c010 = field.calculateSignedDistance(min_x, max_y, min_z);
-    const c001 = field.calculateSignedDistance(min_x, min_y, max_z);
-    const c101 = field.calculateSignedDistance(max_x, min_y, max_z);
-    const c111 = field.calculateSignedDistance(max_x, max_y, max_z);
-    const c011 = field.calculateSignedDistance(min_x, max_y, max_z);
-
-    const x00 = c000 * one_minus_dx + c100 * dx;
-    const x01 = c001 * one_minus_dx + c101 * dx;
-    const x10 = c010 * one_minus_dx + c110 * dx;
-    const x11 = c011 * one_minus_dx + c111 * dx;
-
-    const y0 = x00 * one_minus_dy + x10 * dy;
-    const y1 = x01 * one_minus_dy + x11 * dy;
-
-    return y0 * one_minus_dz + y1 * dz;
 }
 
 class SampleEdge {
@@ -2654,7 +2708,7 @@ class SampleEdge {
 }
 
 export class SampleOctreeRoot {
-    constructor(min_x, min_y, min_z, max_x, max_y, max_z, subdivision_count = 1) {
+    constructor(min_x, min_y, min_z, max_x, max_y, max_z, depth = 0) {
         this.kind  = SAMPLE_OCTREE_KIND_ROOT;
         this.min_x = min_x;
         this.min_y = min_y;
@@ -2662,7 +2716,7 @@ export class SampleOctreeRoot {
         this.max_x = max_x;
         this.max_y = max_y;
         this.max_z = max_z;
-        this.subdivision_count = subdivision_count;
+        this.depth = depth;
         this.node000 = null;
         this.node100 = null;
         this.node110 = null;
@@ -2681,7 +2735,7 @@ export class SampleOctreeRoot {
         this.sample011 = null;
     }
 
-    sampleSignedDistanceField(field, merge_threshold = null) {
+    sampleSignedDistanceField(field, max_depth, merge_threshold = null) {
         const min_x = this.min_x, max_x = this.max_x, center_x = (max_x + min_x) / 2;
         const min_y = this.min_y, max_y = this.max_y, center_y = (max_y + min_y) / 2;
         const min_z = this.min_z, max_z = this.max_z, center_z = (max_z + min_z) / 2;
@@ -2704,15 +2758,15 @@ export class SampleOctreeRoot {
             const center_bottom_interp = interpolatePoint(field, min_x, min_y, min_z, max_x, max_y, max_z, center_x, center_y, min_z);
             
             const accurate_bilinear_interpolation = Math.abs(center_sample - center_interp) <= merge_threshold
-            &&                                    Math.abs(center_right_sample - center_right_interp) <= merge_threshold
-            &&                                    Math.abs(center_left_sample - center_left_interp) <= merge_threshold
-            &&                                    Math.abs(center_near_sample - center_near_interp) <= merge_threshold
-            &&                                    Math.abs(center_far_sample - center_far_interp) <= merge_threshold
-            &&                                    Math.abs(center_top_sample - center_top_interp) <= merge_threshold
-            &&                                    Math.abs(center_bottom_sample - center_bottom_interp) <= merge_threshold;
+            &&                                      Math.abs(center_right_sample - center_right_interp) <= merge_threshold
+            &&                                      Math.abs(center_left_sample - center_left_interp) <= merge_threshold
+            &&                                      Math.abs(center_near_sample - center_near_interp) <= merge_threshold
+            &&                                      Math.abs(center_far_sample - center_far_interp) <= merge_threshold
+            &&                                      Math.abs(center_top_sample - center_top_interp) <= merge_threshold
+            &&                                      Math.abs(center_bottom_sample - center_bottom_interp) <= merge_threshold;
 
             if (accurate_bilinear_interpolation) {
-                const result = new SampleOctreeLeaf(min_x, min_y, min_z, max_x, max_y, max_z);
+                const result = new SampleOctreeLeaf(min_x, min_y, min_z, max_x, max_y, max_z, this.depth);
                 result.sample000 = field.calculateSignedDistance(min_x, min_y, min_z);
                 result.sample001 = field.calculateSignedDistance(min_x, min_y, max_z);
                 result.sample010 = field.calculateSignedDistance(min_x, max_y, min_z);
@@ -2721,30 +2775,30 @@ export class SampleOctreeRoot {
                 result.sample101 = field.calculateSignedDistance(max_x, min_y, max_z);
                 result.sample110 = field.calculateSignedDistance(max_x, max_y, min_z);
                 result.sample111 = field.calculateSignedDistance(max_x, max_y, max_z);
-                return result.sampleSignedDistanceField(field);
+                return result.sampleSignedDistanceField(field, max_depth, merge_threshold);
             }
         }
 
-        if (this.subdivision_count == 1) {
-            this.node000 = new SampleOctreeLeaf(min_x, min_y, min_z, center_x, center_y, center_z, 0);
-            this.node001 = new SampleOctreeLeaf(min_x, min_y, center_z, center_x, center_y, max_z, 0);
-            this.node010 = new SampleOctreeLeaf(min_x, center_y, min_z, center_x, max_y, center_z, 0);
-            this.node011 = new SampleOctreeLeaf(min_x, center_y, center_z, center_x, max_y, max_z, 0);
-            this.node100 = new SampleOctreeLeaf(center_x, min_y, min_z, max_x, center_y, center_z, 0);
-            this.node101 = new SampleOctreeLeaf(center_x, min_y, center_z, max_x, center_y, max_z, 0);
-            this.node110 = new SampleOctreeLeaf(center_x, center_y, min_z, max_x, max_y, center_z, 0);
-            this.node111 = new SampleOctreeLeaf(center_x, center_y, center_z, max_x, max_y, max_z, 0);
+        const next_depth = this.depth + 1;
+        if (next_depth == max_depth) {
+            this.node000 = new SampleOctreeLeaf(min_x, min_y, min_z, center_x, center_y, center_z, max_depth);
+            this.node001 = new SampleOctreeLeaf(min_x, min_y, center_z, center_x, center_y, max_z, max_depth);
+            this.node010 = new SampleOctreeLeaf(min_x, center_y, min_z, center_x, max_y, center_z, max_depth);
+            this.node011 = new SampleOctreeLeaf(min_x, center_y, center_z, center_x, max_y, max_z, max_depth);
+            this.node100 = new SampleOctreeLeaf(center_x, min_y, min_z, max_x, center_y, center_z, max_depth);
+            this.node101 = new SampleOctreeLeaf(center_x, min_y, center_z, max_x, center_y, max_z, max_depth);
+            this.node110 = new SampleOctreeLeaf(center_x, center_y, min_z, max_x, max_y, center_z, max_depth);
+            this.node111 = new SampleOctreeLeaf(center_x, center_y, center_z, max_x, max_y, max_z, max_depth);
         }
         else {
-            const subdivision_count = this.subdivision_count - 1;
-            this.node000 = new SampleOctreeRoot(min_x, min_y, min_z, center_x, center_y, center_z, subdivision_count);
-            this.node001 = new SampleOctreeRoot(min_x, min_y, center_z, center_x, center_y, max_z, subdivision_count);
-            this.node010 = new SampleOctreeRoot(min_x, center_y, min_z, center_x, max_y, center_z, subdivision_count);
-            this.node011 = new SampleOctreeRoot(min_x, center_y, center_z, center_x, max_y, max_z, subdivision_count);
-            this.node100 = new SampleOctreeRoot(center_x, min_y, min_z, max_x, center_y, center_z, subdivision_count);
-            this.node101 = new SampleOctreeRoot(center_x, min_y, center_z, max_x, center_y, max_z, subdivision_count);
-            this.node110 = new SampleOctreeRoot(center_x, center_y, min_z, max_x, max_y, center_z, subdivision_count);
-            this.node111 = new SampleOctreeRoot(center_x, center_y, center_z, max_x, max_y, max_z, subdivision_count);
+            this.node000 = new SampleOctreeRoot(min_x, min_y, min_z, center_x, center_y, center_z, next_depth);
+            this.node001 = new SampleOctreeRoot(min_x, min_y, center_z, center_x, center_y, max_z, next_depth);
+            this.node010 = new SampleOctreeRoot(min_x, center_y, min_z, center_x, max_y, center_z, next_depth);
+            this.node011 = new SampleOctreeRoot(min_x, center_y, center_z, center_x, max_y, max_z, next_depth);
+            this.node100 = new SampleOctreeRoot(center_x, min_y, min_z, max_x, center_y, center_z, next_depth);
+            this.node101 = new SampleOctreeRoot(center_x, min_y, center_z, max_x, center_y, max_z, next_depth);
+            this.node110 = new SampleOctreeRoot(center_x, center_y, min_z, max_x, max_y, center_z, next_depth);
+            this.node111 = new SampleOctreeRoot(center_x, center_y, center_z, max_x, max_y, max_z, next_depth);
         }
 
         const center_min_min_sample = field.calculateSignedDistance(center_x, min_y, min_z);
@@ -2846,14 +2900,14 @@ export class SampleOctreeRoot {
         this.sample110 = null;
         this.sample111 = null;
 
-        this.node000 = this.node000.sampleSignedDistanceField(field, merge_threshold);
-        this.node001 = this.node001.sampleSignedDistanceField(field, merge_threshold);
-        this.node010 = this.node010.sampleSignedDistanceField(field, merge_threshold);
-        this.node011 = this.node011.sampleSignedDistanceField(field, merge_threshold);
-        this.node100 = this.node100.sampleSignedDistanceField(field, merge_threshold);
-        this.node101 = this.node101.sampleSignedDistanceField(field, merge_threshold);
-        this.node110 = this.node110.sampleSignedDistanceField(field, merge_threshold);
-        this.node111 = this.node111.sampleSignedDistanceField(field, merge_threshold);
+        this.node000 = this.node000.sampleSignedDistanceField(field, max_depth, merge_threshold);
+        this.node001 = this.node001.sampleSignedDistanceField(field, max_depth, merge_threshold);
+        this.node010 = this.node010.sampleSignedDistanceField(field, max_depth, merge_threshold);
+        this.node011 = this.node011.sampleSignedDistanceField(field, max_depth, merge_threshold);
+        this.node100 = this.node100.sampleSignedDistanceField(field, max_depth, merge_threshold);
+        this.node101 = this.node101.sampleSignedDistanceField(field, max_depth, merge_threshold);
+        this.node110 = this.node110.sampleSignedDistanceField(field, max_depth, merge_threshold);
+        this.node111 = this.node111.sampleSignedDistanceField(field, max_depth, merge_threshold);
 
         const children_kind = this.node000.kind | this.node100.kind | this.node110.kind | this.node010.kind
         |                     this.node001.kind | this.node101.kind | this.node111.kind | this.node011.kind;
@@ -2871,7 +2925,7 @@ export class SampleOctreeRoot {
 }
 
 export class SampleOctreeLeaf {
-    constructor(min_x, min_y, min_z, max_x, max_y, max_z) {
+    constructor(min_x, min_y, min_z, max_x, max_y, max_z, depth) {
         this.kind  = SAMPLE_OCTREE_KIND_LEAF;
         this.min_x = min_x;
         this.min_y = min_y;
@@ -2879,6 +2933,7 @@ export class SampleOctreeLeaf {
         this.max_x = max_x;
         this.max_y = max_y;
         this.max_z = max_z;
+        this.depth = depth;
         this.sample000 = 0;
         this.sample100 = 0;
         this.sample110 = 0;
@@ -2913,13 +2968,47 @@ export class SampleOctreeLeaf {
         if (node_state == ALL_SAMPLES_OUTSIDE) { return _SAMPLE_OCTREE_EMPTY; }
 
         const position = this.calculateSurfacePosition(field);
+        position.x = clamp(position.x, this.min_x, this.max_x);
+        position.y = clamp(position.y, this.min_y, this.max_y);
+        position.z = clamp(position.z, this.min_z, this.max_z);
         const normal = field.calculateGradient(position.x, position.y, position.z).normalize();
         this.surface_vertex = new Vertex(position, normal);
         return this;
     }
-        
-    calculateSurfacePosition(field) {
-        const edges = this.getTemporaryEdges();
+    
+    // calculateSurfacePosition(field) {
+    //     const edges = this.getTemporaryEdges(_temp_edges);
+
+    //     let x = 0, y = 0, z = 0, intersection_count = 0;
+    //     for (let idx = 0; idx < edges.length; ++idx) {
+    //         const edge = edges[idx];
+    //         const dx = edge.x1 - edge.x0;
+    //         const dy = edge.y1 - edge.y0;
+    //         const dz = edge.z1 - edge.z0;
+    //         const distance = Math.sqrt(dx*dx + dy*dy + dz*dz);
+    //         const normal_x = dx / distance;
+    //         const normal_y = dy / distance;
+    //         const normal_z = dz / distance;
+            
+    //         if ((edge.sample0 < 0) != (edge.sample1 < 0)) {
+    //             const raycast_distance = field.raycast(edge.x0, edge.y0, edge.z0, normal_x, normal_y, normal_z);
+    //             x += raycast_distance * normal_x + edge.x0;
+    //             y += raycast_distance * normal_y + edge.y0;
+    //             z += raycast_distance * normal_z + edge.z0;
+    //             intersection_count += 1;
+    //         }
+    //     }
+
+    //     if (intersection_count == 0) {
+    //         return null;
+    //     }
+
+    //     const factor = 1 / intersection_count;
+    //     return new Vector3(x * factor, y * factor, z * factor);
+    // }
+    
+    calculateSurfacePosition() {
+        const edges = this.getTemporaryEdges(_temp_edges);
 
         let x = 0, y = 0, z = 0, intersection_count = 0;
         for (let idx = 0; idx < edges.length; ++idx) {
@@ -2927,15 +3016,9 @@ export class SampleOctreeLeaf {
             const dx = edge.x1 - edge.x0;
             const dy = edge.y1 - edge.y0;
             const dz = edge.z1 - edge.z0;
-            const distance = Math.sqrt(dx*dx + dy*dy + dz*dz);
-            const normal_x = dx / distance;
-            const normal_y = dy / distance;
-            const normal_z = dz / distance;
             
             if ((edge.sample0 < 0) != (edge.sample1 < 0)) {
-                // const t = Math.abs(edge.sample0) / (Math.abs(edge.sample0) + Math.abs(edge.sample1));
-                const raycast_distance = field.raycast(edge.x0, edge.y0, edge.z0, normal_x, normal_y, normal_z);
-                const t = raycast_distance / distance;
+                const t = Math.abs(edge.sample0) / (Math.abs(edge.sample0) + Math.abs(edge.sample1));
                 x += dx * t + edge.x0;
                 y += dy * t + edge.y0;
                 z += dz * t + edge.z0;
@@ -2951,24 +3034,24 @@ export class SampleOctreeLeaf {
         return new Vector3(x * factor, y * factor, z * factor);
     }
     
-    getTemporaryEdges() {
+    getTemporaryEdges(edges) {
         const min_x = this.min_x, min_y = this.min_y, min_z = this.min_z;
         const max_x = this.max_x, max_y = this.max_y, max_z = this.max_z;
 
-        _temp_edges[0].set(min_x, min_y, min_z, this.sample000, max_x, min_y, min_z, this.sample100);
-        _temp_edges[1].set(min_x, max_y, min_z, this.sample010, max_x, max_y, min_z, this.sample110);
-        _temp_edges[2].set(min_x, min_y, max_z, this.sample001, max_x, min_y, max_z, this.sample101);
-        _temp_edges[3].set(min_x, max_y, max_z, this.sample011, max_x, max_y, max_z, this.sample111);
-        _temp_edges[4].set(min_x, min_y, min_z, this.sample000, min_x, max_y, min_z, this.sample010);
-        _temp_edges[5].set(max_x, min_y, min_z, this.sample100, max_x, max_y, min_z, this.sample110);
-        _temp_edges[6].set(min_x, min_y, max_z, this.sample001, min_x, max_y, max_z, this.sample011);
-        _temp_edges[7].set(max_x, min_y, max_z, this.sample101, max_x, max_y, max_z, this.sample111);
-        _temp_edges[8].set(min_x, min_y, min_z, this.sample000, min_x, min_y, max_z, this.sample001);
-        _temp_edges[9].set(max_x, min_y, min_z, this.sample100, max_x, min_y, max_z, this.sample101);
-        _temp_edges[10].set(max_x, max_y, min_z, this.sample110, max_x, max_y, max_z, this.sample111);
-        _temp_edges[11].set(min_x, max_y, min_z, this.sample010, min_x, max_y, max_z, this.sample011);
+        edges[0].set(min_x, min_y, min_z, this.sample000, max_x, min_y, min_z, this.sample100);
+        edges[1].set(min_x, max_y, min_z, this.sample010, max_x, max_y, min_z, this.sample110);
+        edges[2].set(min_x, min_y, max_z, this.sample001, max_x, min_y, max_z, this.sample101);
+        edges[3].set(min_x, max_y, max_z, this.sample011, max_x, max_y, max_z, this.sample111);
+        edges[4].set(min_x, min_y, min_z, this.sample000, min_x, max_y, min_z, this.sample010);
+        edges[5].set(max_x, min_y, min_z, this.sample100, max_x, max_y, min_z, this.sample110);
+        edges[6].set(min_x, min_y, max_z, this.sample001, min_x, max_y, max_z, this.sample011);
+        edges[7].set(max_x, min_y, max_z, this.sample101, max_x, max_y, max_z, this.sample111);
+        edges[8].set(min_x, min_y, min_z, this.sample000, min_x, min_y, max_z, this.sample001);
+        edges[9].set(max_x, min_y, min_z, this.sample100, max_x, min_y, max_z, this.sample101);
+        edges[10].set(max_x, max_y, min_z, this.sample110, max_x, max_y, max_z, this.sample111);
+        edges[11].set(min_x, max_y, min_z, this.sample010, min_x, max_y, max_z, this.sample011);
 
-        return _temp_edges;
+        return edges;
     }
 }
 
@@ -3025,6 +3108,10 @@ export class SampleOctreeMeshBuilder {
     }
 
     addQuad(node0, node1, node2, node3, should_flip = false) {
+        // if (!(node0.depth == node1.depth && node0.depth == node2.depth && node0.depth == node3.depth)) {
+        //     return;
+        // }
+
         if (node0 == node1) return this.addTriangle(node0, node2, node3, should_flip);
         if (node0 == node2) throw new Error("Invalid quad winding!");
         if (node0 == node3) return this.addTriangle(node0, node1, node2, should_flip);
@@ -3221,7 +3308,7 @@ export class SampleOctreeMeshBuilder {
         }
 
         if ((kind & SAMPLE_OCTREE_KIND_ROOT) == 0) {
-            const test = getLowestSubdivision(node0, node1, node2, node3);
+            const test = getHighestDepthNode(node0, node1, node2, node3);
 
             let should_flip = false;
             switch (test) {
@@ -3256,7 +3343,7 @@ export class SampleOctreeMeshBuilder {
         }
 
         if ((kind & SAMPLE_OCTREE_KIND_ROOT) == 0) {
-            const test = getLowestSubdivision(node0, node1, node2, node3);
+            const test = getHighestDepthNode(node0, node1, node2, node3);
 
             let should_flip = false;
             switch (test) {
@@ -3291,7 +3378,7 @@ export class SampleOctreeMeshBuilder {
         }
 
         if ((kind & SAMPLE_OCTREE_KIND_ROOT) == 0) {
-            const test = getLowestSubdivision(node0, node1, node2, node3);
+            const test = getHighestDepthNode(node0, node1, node2, node3);
 
             let should_flip = false;
             switch (test) {
@@ -3319,115 +3406,50 @@ export class SampleOctreeMeshBuilder {
     }
 }
 
-export function createSampleOctreeFromField(field, bounding_box, subdivision_count, merge_threshold = null) {
-    return new SampleOctreeRoot(
-        bounding_box.min_x,
-        bounding_box.min_y,
-        bounding_box.min_z,
-        bounding_box.max_x,
-        bounding_box.max_y,
-        bounding_box.max_z,
-        subdivision_count
-    ).sampleSignedDistanceField(field, merge_threshold);
-}
-
-export function triangulateSignedDistanceField(field, bounding_box = field.bounding_box, subdivision_count = 8, merge_threshold = 0.0005) {
-    const tree = new SampleOctreeRoot(
-        bounding_box.min_x,
-        bounding_box.min_y,
-        bounding_box.min_z,
-        bounding_box.max_x,
-        bounding_box.max_y,
-        bounding_box.max_z,
-        subdivision_count
-    ).sampleSignedDistanceField(field, merge_threshold);
-    const _builder = new SampleOctreeMeshBuilder();
-    _builder.processCell(tree);
-    return _builder.getMesh();
-}
-
-export class BufferWriter {
-    constructor(buffer) {
-        this.view = new DataView(buffer);
-        this.offset = 0;
+export class ByteWriter {
+    constructor(data = []) {
+        this._offset = 0;
+        this._data = Array.from(data);
     }
 
-    setOffset(offset) { this.offset = offset; }
-    writeInt8(value) { this.view.setInt8(this.offset, value); this.offset += 1; }
-    writeUint8(value) { this.view.setUint8(this.offset, value); this.offset += 1; }
-    writeInt16(value, littleEndian) { this.view.setInt16(this.offset, value, littleEndian); this.offset += 2; }
-    writeUint16(value, littleEndian) { this.view.setUint16(this.offset, value, littleEndian); this.offset += 2; }
-    writeInt32(value, littleEndian) { this.view.setInt32(this.offset, value, littleEndian); this.offset += 4; }
-    writeUint32(value, littleEndian) { this.view.setUint32(this.offset, value, littleEndian); this.offset += 4; }
-    writeFloat32(value, littleEndian) { this.view.setFloat32(this.offset, value, littleEndian); this.offset += 4; }
-    writeFloat64(value, littleEndian) { this.view.setFloat64(this.offset, value, littleEndian); this.offset += 8; }
-    writeBuffer(buffer) {
-        const uint8_view = new Uint8Array(this.view.buffer);
-        uint8_view.set(new Uint8Array(buffer), this.offset);
-        this.offset += buffer.byteLength;
-    }
-}
+    setOffset(offset)    { this._offset = offset; }
 
-export function convertToSTL(mesh) {
-    if (mesh instanceof TriangleMesh == false) {
-        throw new Error("input mesh must be a 'TriangleMesh'!");
-    }
+    writeUint8(value)    { this._data[this._offset++] = (value      ) & 0xFF; }
+    writeUint16LE(value) { this._data[this._offset++] = (value      ) & 0xFF; this._data[this._offset++] = (value >>  8) & 0xFF; }
+    writeUint32LE(value) { this._data[this._offset++] = (value      ) & 0xFF; this._data[this._offset++] = (value >>  8) & 0xFF;
+                           this._data[this._offset++] = (value >> 16) & 0xFF; this._data[this._offset++] = (value >> 24) & 0xFF; }
+    writeUint64LE(value) { this._data[this._offset++] = (value      ) & 0xFF; this._data[this._offset++] = (value >>  8) & 0xFF;
+                           this._data[this._offset++] = (value >> 16) & 0xFF; this._data[this._offset++] = (value >> 24) & 0xFF;
+                           this._data[this._offset++] = (value >> 32) & 0xFF; this._data[this._offset++] = (value >> 40) & 0xFF;
+                           this._data[this._offset++] = (value >> 48) & 0xFF; this._data[this._offset++] = (value >> 56) & 0xFF; }
+    writeUint16BE(value) { this._data[this._offset++] = (value >>  8) & 0xFF; this._data[this._offset++] = (value      ) & 0xFF; }
+    writeUint32BE(value) { this._data[this._offset++] = (value >> 24) & 0xFF; this._data[this._offset++] = (value >> 16) & 0xFF;
+                           this._data[this._offset++] = (value >>  8) & 0xFF; this._data[this._offset++] = (value      ) & 0xFF; }
+    writeUint64BE(value) { this._data[this._offset++] = (value >> 56) & 0xFF; this._data[this._offset++] = (value >> 48) & 0xFF;
+                           this._data[this._offset++] = (value >> 40) & 0xFF; this._data[this._offset++] = (value >> 32) & 0xFF;
+                           this._data[this._offset++] = (value >> 24) & 0xFF; this._data[this._offset++] = (value >> 16) & 0xFF;
+                           this._data[this._offset++] = (value >>  8) & 0xFF; this._data[this._offset++] = (value      ) & 0xFF; }
 
-    const triangle_count = mesh.indices.length / 3;
-    const buffer = new ArrayBuffer(STL_TRIANGLE_OFFSET + STL_BYTES_PER_TRIANGLE * triangle_count);
-    const writer = new BufferWriter(buffer);
+    writeInt8(value)    { this._data[this._offset++] = (value      ) & 0xFF; }
+    writeInt16LE(value) { this._data[this._offset++] = (value      ) & 0xFF; this._data[this._offset++] = (value >>  8) & 0xFF; }
+    writeInt32LE(value) { this._data[this._offset++] = (value      ) & 0xFF; this._data[this._offset++] = (value >>  8) & 0xFF;
+                          this._data[this._offset++] = (value >> 16) & 0xFF; this._data[this._offset++] = (value >> 24) & 0xFF; }
+    writeInt64LE(value) { this._data[this._offset++] = (value      ) & 0xFF; this._data[this._offset++] = (value >>  8) & 0xFF;
+                          this._data[this._offset++] = (value >> 16) & 0xFF; this._data[this._offset++] = (value >> 24) & 0xFF;
+                          this._data[this._offset++] = (value >> 32) & 0xFF; this._data[this._offset++] = (value >> 40) & 0xFF;
+                          this._data[this._offset++] = (value >> 48) & 0xFF; this._data[this._offset++] = (value >> 56) & 0xFF; }
+    writeInt16BE(value) { this._data[this._offset++] = (value >>  8) & 0xFF; this._data[this._offset++] = (value      ) & 0xFF; }
+    writeInt32BE(value) { this._data[this._offset++] = (value >> 24) & 0xFF; this._data[this._offset++] = (value >> 16) & 0xFF;
+                          this._data[this._offset++] = (value >>  8) & 0xFF; this._data[this._offset++] = (value      ) & 0xFF; }
+    writeInt64BE(value) { this._data[this._offset++] = (value >> 56) & 0xFF; this._data[this._offset++] = (value >> 48) & 0xFF;
+                          this._data[this._offset++] = (value >> 40) & 0xFF; this._data[this._offset++] = (value >> 32) & 0xFF;
+                          this._data[this._offset++] = (value >> 24) & 0xFF; this._data[this._offset++] = (value >> 16) & 0xFF;
+                          this._data[this._offset++] = (value >>  8) & 0xFF; this._data[this._offset++] = (value      ) & 0xFF; }
 
-    writer.setOffset(STL_HEADER_SIZE);
-    writer.writeUint32(triangle_count, true);
+    writeUnsignedBytes(bytes) { for (const byte of bytes) this.writeUint8(byte); }
+    writeSignedBytes(bytes)   { for (const byte of bytes) this.writeInt8(byte); }
 
-    for (let idx = 0; idx < mesh.indices.length; idx += 3) {
-        const position0 = mesh.vertices[mesh.indices[idx + 0]].position;
-        const position1 = mesh.vertices[mesh.indices[idx + 1]].position;
-        const position2 = mesh.vertices[mesh.indices[idx + 2]].position;
-
-        temp_plane.fromVectors(position0, position1, position2);
-
-        writer.writeFloat32(temp_plane.normal_x, true);
-        writer.writeFloat32(temp_plane.normal_y, true);
-        writer.writeFloat32(temp_plane.normal_z, true);
-
-        writer.writeFloat32(position0.x, true);
-        writer.writeFloat32(position0.y, true);
-        writer.writeFloat32(position0.z, true);
-
-        writer.writeFloat32(position1.x, true);
-        writer.writeFloat32(position1.y, true);
-        writer.writeFloat32(position1.z, true);
-
-        writer.writeFloat32(position2.x, true);
-        writer.writeFloat32(position2.y, true);
-        writer.writeFloat32(position2.z, true);
-
-        writer.writeUint16(0, true);
-    }
-
-    return new Uint8Array(buffer);
-}
-
-export function convertToOBJ(mesh) {
-    if (mesh instanceof TriangleMesh == false) {
-        throw new Error("input mesh must be a 'TriangleMesh'!");
-    }
-
-    let output = "";
-    for (let idx = 0; idx < mesh.vertices.length; ++idx) {
-        const position = mesh.vertices[idx].position;
-        output += `v ${position.x}, ${position.y}, ${position.z}\n`;
-    }
-
-    for (let idx = 0; idx < mesh.indices.length; idx += 3) {
-        const index0 = mesh.indices[idx + 0] + 1;
-        const index1 = mesh.indices[idx + 1] + 1;
-        const index2 = mesh.indices[idx + 2] + 1;
-        output += `f ${index0}, ${index1}, ${index2}\n`;
-    }
-
-    return output;
+    data() { return new Uint8Array(this._data); }
 }
 
 export class SignedDistanceField2 {
@@ -3467,9 +3489,9 @@ export class SignedDistanceField2 {
     union(... fields) { return new UnionSignedDistanceField2([ this, ... fields ]); }
     difference(... fields) { return new DifferenceSignedDistanceField2([ this, ... fields ]); }
     intersection(... fields) { return new IntersectionSignedDistanceField2([ this, ... fields ]); }
-    unionSmooth(smoothness = 0, ... fields) { return new UnionSmoothSignedDistanceField2(smoothness, [ this, ... fields ]); }
-    differenceSmooth(smoothness = 0, ... fields) { return new DifferenceSmoothSignedDistanceField2(smoothness, [ this, ... fields ]); }
-    intersectionSmooth(smoothness = 0, ... fields) { return new IntersectionSmoothSignedDistanceField2(smoothness, [ this, ... fields ]); }
+    unionSmooth(... fields) { return new UnionSignedDistanceField2([ this, ... fields ], SMOOTHING_METHOD_DEFAULT_QUADRATIC); }
+    differenceSmooth(... fields) { return new DifferenceSignedDistanceField2([ this, ... fields ], SMOOTHING_METHOD_DEFAULT_QUADRATIC); }
+    intersectionSmooth(... fields) { return new IntersectionSignedDistanceField2([ this, ... fields ], SMOOTHING_METHOD_DEFAULT_QUADRATIC); }
 
     translate(x = 0, y = 0) { return this.transform(_m3_temp.identity().translate(x, y)); }
     rotate(angle = 0) { return this.transform(_m3_temp.identity().rotateZ(angle)); }
@@ -3516,45 +3538,50 @@ export class OffsetSignedDistanceField2 extends SignedDistanceField2 {
 }
 
 export class UnionSignedDistanceField2 extends SignedDistanceField2 {
-    constructor(fields = []) {
+    constructor(fields = [], smoothing_method = SMOOTHING_METHOD_DEFAULT_NONE) {
         super();
         this.fields = fields;
         this.bounding_box = this.fields[0].bounding_box.clone();
+        this.smoothing_method = smoothing_method;
         for (let idx = 1; idx < this.fields.length; ++idx) {
             this.bounding_box.union(this.fields[idx].bounding_box);
         }
     }
 
+    setSmoothingMethod(method) { this.smoothing_method = method; return this; }
     calculateSignedDistance(x, y) {
         let distance = this.fields[0].calculateSignedDistance(x, y);
         for (let idx = 1; idx < this.fields.length; ++idx) {
-            distance = Math.min(distance, this.fields[idx].calculateSignedDistance(x, y));
+            distance = this.smoothing_method.min(distance, this.fields[idx].calculateSignedDistance(x, y));
         }
         return distance;
     }
 }
 
 export class DifferenceSignedDistanceField2 extends SignedDistanceField2 {
-    constructor(fields = []) {
+    constructor(fields = [], smoothing_method = SMOOTHING_METHOD_DEFAULT_NONE) {
         super();
         this.fields = fields;
         this.bounding_box = this.fields[0].bounding_box.clone();
+        this.smoothing_method = smoothing_method;
     }
 
+    setSmoothingMethod(method) { this.smoothing_method = method; return this; }
     calculateSignedDistance(x, y) {
         let distance = this.fields[0].calculateSignedDistance(x, y);
         for (let idx = 1; idx < this.fields.length; ++idx) {
-            distance = Math.max(distance, -this.fields[idx].calculateSignedDistance(x, y));
+            distance = this.smoothing_method.max(distance, -this.fields[idx].calculateSignedDistance(x, y));
         }
         return distance;
     }
 }
 
 export class IntersectionSignedDistanceField2 extends SignedDistanceField2 {
-    constructor(fields = []) {
+    constructor(fields = [], smoothing_method = SMOOTHING_METHOD_DEFAULT_NONE) {
         super();
         this.fields = fields;
         this.bounding_box = this.fields[0].bounding_box.clone();
+        this.smoothing_method = smoothing_method;
         for (let idx = 1; idx < this.fields.length; ++idx) {
             this.bounding_box.intersect(this.fields[idx].bounding_box);
         }
@@ -3563,68 +3590,7 @@ export class IntersectionSignedDistanceField2 extends SignedDistanceField2 {
     calculateSignedDistance(x, y) {
         let distance = this.fields[0].calculateSignedDistance(x, y);
         for (let idx = 1; idx < this.fields.length; ++idx) {
-            distance = Math.max(distance, this.fields[idx].calculateSignedDistance(x, y));
-        }
-        return distance;
-    }
-}
-
-export class UnionSmoothSignedDistanceField2 extends SignedDistanceField2 {
-    constructor(fields = []) {
-        super();
-        this.fields = fields;
-        this.bounding_box = this.fields[0].bounding_box.clone();
-        this.smoothing_method = SMOOTHING_METHOD_CIRCULAR_GEOMETRICAL;
-        for (let idx = 1; idx < this.fields.length; ++idx) {
-            this.bounding_box.union(this.fields[idx].bounding_box);
-        }
-    }
-
-    setSmoothingMethod(method) { this.smoothing_method = method; return this; }
-    calculateSignedDistance(x, y) {
-        let distance = this.fields[0].calculateSignedDistance(x, y);
-        for (let idx = 1; idx < this.fields.length; ++idx) {
-            distance = this.smoothing_method.min(distance, this.fields[idx].calculateSignedDistance(x, y), this.smoothness);
-        }
-        return distance;
-    }
-}
-
-export class DifferenceSmoothSignedDistanceField2 extends SignedDistanceField2 {
-    constructor(fields = []) {
-        super();
-        this.fields = fields;
-        this.bounding_box = this.fields[0].bounding_box.clone();
-        this.smoothing_method = SMOOTHING_METHOD_CIRCULAR_GEOMETRICAL;
-    }
-
-    setSmoothingMethod(method) { this.smoothing_method = method; return this; }
-    calculateSignedDistance(x, y) {
-        let distance = this.fields[0].calculateSignedDistance(x, y);
-        for (let idx = 1; idx < this.fields.length; ++idx) {
-            distance = this.smoothing_method.max(distance, this.fields[idx].calculateSignedDistance(x, y), this.smoothness);
-        }
-        return distance;
-    }
-}
-
-export class IntersectionSmoothSignedDistanceField2 extends SignedDistanceField2 {
-    constructor(fields = []) {
-        super();
-        this.fields = fields;
-        this.bounding_box = this.fields[0].bounding_box.clone();
-        this.smoothing_method = SMOOTHING_METHOD_CIRCULAR_GEOMETRICAL;
-        this.k = 0;
-        for (let idx = 1; idx < this.fields.length; ++idx) {
-            this.bounding_box.intersect(this.fields[idx].bounding_box);
-        }
-    }
-
-    setSmoothingMethod(method) { this.smoothing_method = method; return this; }
-    calculateSignedDistance(x, y) {
-        let distance = this.fields[0].calculateSignedDistance(x, y);
-        for (let idx = 1; idx < this.fields.length; ++idx) {
-            distance = this.smoothing_method.max(distance, this.fields[idx].calculateSignedDistance(x, y), this.smoothness);
+            distance = this.smoothing_method.max(distance, this.fields[idx].calculateSignedDistance(x, y));
         }
         return distance;
     }
@@ -3674,9 +3640,9 @@ export class SignedDistanceField3 {
     union(... fields) { return new UnionSignedDistanceField3([ this, ... fields ]); }
     difference(... fields) { return new DifferenceSignedDistanceField3([ this, ... fields ]); }
     intersection(... fields) { return new IntersectionSignedDistanceField3([ this, ... fields ]); }
-    unionSmooth(smoothness = 0, ... fields) { return new UnionSmoothSignedDistanceField3(smoothness, [ this, ... fields ]); }
-    differenceSmooth(smoothness = 0, ... fields) { return new DifferenceSmoothSignedDistanceField3(smoothness, [ this, ... fields ]); }
-    intersectionSmooth(smoothness = 0, ... fields) { return new IntersectionSmoothSignedDistanceField3(smoothness, [ this, ... fields ]); }
+    unionSmooth(... fields) { return new UnionSignedDistanceField3([ this, ... fields ], SMOOTHING_METHOD_DEFAULT_QUADRATIC); }
+    differenceSmooth(... fields) { return new DifferenceSignedDistanceField3([ this, ... fields ], SMOOTHING_METHOD_DEFAULT_QUADRATIC); }
+    intersectionSmooth(... fields) { return new IntersectionSignedDistanceField3([ this, ... fields ], SMOOTHING_METHOD_DEFAULT_QUADRATIC); }
 
     translate(x = 0, y = 0, z = 0) {
         return this.transform(_m4_temp.identity().translate(x, y, z));
@@ -3797,6 +3763,32 @@ export class PlaneSignedDistanceField3 extends SignedDistanceField3 {
     }
 }
 
+export class ConeSignedDistanceField3 extends SignedDistanceField3 {
+    constructor(radius = 10, height = 20) {
+        super();
+        this.radius = radius;
+        this.height = height;
+        this.bounding_box = new BoundingBox3(-this.radius, -this.radius,-this.height,
+                                              this.radius,  this.radius, this.height);
+    }
+
+    calculateSignedDistance(x, y, z) {
+        const qx =  this.radius;
+        const qy = -this.height;
+        const wx = Math.sqrt(x * x + y * y);
+        const wy = z;
+        const factor = clamp((wx * qx + wy * qy) / (qx * qx + qy * qy), 0.0, 1.0);
+        const ax = wx - qx * factor;
+        const ay = wy - qy * factor;
+        const bx = wx - qx * clamp(wx / qx, 0.0, 1.0 );
+        const by = wy - qy;
+        const k = Math.sign(qy);
+        const d = Math.min(ax * ax + ay * ay, bx * bx + by * by);
+        const s = Math.max(k * (wx * qy - wy * qx), k * (wy - qy));
+        return Math.sqrt(d) * Math.sign(s);
+    }
+}
+
 export class TransformSignedDistanceField3 extends SignedDistanceField3 {
     constructor(field, matrix = new Matrix4()) {
         super();
@@ -3858,107 +3850,50 @@ export class OffsetSignedDistanceField3 extends SignedDistanceField3 {
 }
 
 export class UnionSignedDistanceField3 extends SignedDistanceField3 {
-    constructor(fields = []) {
+    constructor(fields, smoothing_method = SMOOTHING_METHOD_DEFAULT_NONE) {
         super();
         this.fields = fields;
         this.bounding_box = this.fields[0].bounding_box.clone();
+        this.smoothing_method = smoothing_method;
         for (let idx = 1; idx < this.fields.length; ++idx) {
             this.bounding_box.union(this.fields[idx].bounding_box);
         }
     }
 
+    setSmoothingMethod(method) { this.smoothing_method = method; return this; }
     calculateSignedDistance(x, y, z) {
         let distance = this.fields[0].calculateSignedDistance(x, y, z);
         for (let idx = 1; idx < this.fields.length; ++idx) {
-            distance = Math.min(distance, this.fields[idx].calculateSignedDistance(x, y, z));
+            distance = this.smoothing_method.min(distance, this.fields[idx].calculateSignedDistance(x, y, z));
         }
         return distance;
     }
 }
 
 export class DifferenceSignedDistanceField3 extends SignedDistanceField3 {
-    constructor(fields = []) {
+    constructor(fields, smoothing_method = SMOOTHING_METHOD_DEFAULT_NONE) {
         super();
         this.fields = fields;
         this.bounding_box = this.fields[0].bounding_box.clone();
+        this.smoothing_method = smoothing_method;
     }
 
+    setSmoothingMethod(method) { this.smoothing_method = method; return this; }
     calculateSignedDistance(x, y, z) {
         let distance = this.fields[0].calculateSignedDistance(x, y, z);
         for (let idx = 1; idx < this.fields.length; ++idx) {
-            distance = Math.max(distance, -this.fields[idx].calculateSignedDistance(x, y, z));
+            distance = this.smoothing_method.max(distance, -this.fields[idx].calculateSignedDistance(x, y, z));
         }
         return distance;
     }
 }
 
 export class IntersectionSignedDistanceField3 extends SignedDistanceField3 {
-    constructor(fields = []) {
+    constructor(fields, smoothing_method = SMOOTHING_METHOD_DEFAULT_NONE) {
         super();
         this.fields = fields;
         this.bounding_box = this.fields[0].bounding_box.clone();
-        for (let idx = 1; idx < this.fields.length; ++idx) {
-            this.bounding_box.intersect(this.fields[idx].bounding_box);
-        }
-    }
-
-    calculateSignedDistance(x, y, z) {
-        let distance = this.fields[0].calculateSignedDistance(x, y, z);
-        for (let idx = 1; idx < this.fields.length; ++idx) {
-            distance = Math.max(distance, this.fields[idx].calculateSignedDistance(x, y, z));
-        }
-        return distance;
-    }
-}
-
-export class UnionSmoothSignedDistanceField3 extends SignedDistanceField3 {
-    constructor(smoothness, fields) {
-        super();
-        this.smoothness = smoothness;
-        this.fields = fields;
-        this.bounding_box = this.fields[0].bounding_box.clone();
-        this.smoothing_method = SMOOTHING_METHOD_QUADRATIC;
-        for (let idx = 1; idx < this.fields.length; ++idx) {
-            this.bounding_box.union(this.fields[idx].bounding_box);
-        }
-    }
-
-    setSmoothingMethod(method) { this.smoothing_method = method; return this; }
-    calculateSignedDistance(x, y, z) {
-        let distance = this.fields[0].calculateSignedDistance(x, y, z);
-        for (let idx = 1; idx < this.fields.length; ++idx) {
-            distance = this.smoothing_method.min(distance, this.fields[idx].calculateSignedDistance(x, y, z), this.smoothness);
-        }
-        return distance;
-    }
-}
-
-export class DifferenceSmoothSignedDistanceField3 extends SignedDistanceField3 {
-    constructor(smoothness, fields) {
-        super();
-        this.smoothness = smoothness;
-        this.fields = fields;
-        this.bounding_box = this.fields[0].bounding_box.clone();
-        this.smoothing_method = SMOOTHING_METHOD_QUADRATIC;
-    }
-
-    setSmoothingMethod(method) { this.smoothing_method = method; return this; }
-    calculateSignedDistance(x, y, z) {
-        let distance = this.fields[0].calculateSignedDistance(x, y, z);
-        for (let idx = 1; idx < this.fields.length; ++idx) {
-            distance = this.smoothing_method.max(distance, -this.fields[idx].calculateSignedDistance(x, y, z), this.smoothness);
-        }
-        return distance;
-    }
-}
-
-export class IntersectionSmoothSignedDistanceField3 extends SignedDistanceField3 {
-    constructor(smoothness, fields) {
-        super();
-        this.smoothness = smoothness;
-        this.fields = fields;
-        this.bounding_box = this.fields[0].bounding_box.clone();
-        this.smoothing_method = SMOOTHING_METHOD_QUADRATIC;
+        this.smoothing_method = smoothing_method;
         for (let idx = 1; idx < this.fields.length; ++idx) {
             this.bounding_box.intersect(this.fields[idx].bounding_box);
         }
@@ -3968,37 +3903,107 @@ export class IntersectionSmoothSignedDistanceField3 extends SignedDistanceField3
     calculateSignedDistance(x, y, z) {
         let distance = this.fields[0].calculateSignedDistance(x, y, z);
         for (let idx = 1; idx < this.fields.length; ++idx) {
-            distance = this.smoothing_method.max(distance, this.fields[idx].calculateSignedDistance(x, y, z), this.smoothness);
+            distance = this.smoothing_method.max(distance, this.fields[idx].calculateSignedDistance(x, y, z));
         }
         return distance;
     }
 }
 
-export const SMOOTHING_METHOD_NONE = { min(a, b, k) { return Math.min(a, b); }, max(a, b, k) { return Math.max(a, b); } }
-// export const SMOOTHING_METHOD_EXP = { min: smoothMinExp, max(a, b, k) { return -smoothMinExp(-a, -b, k); } };
-// export const SMOOTHING_METHOD_ROOT = { min: smoothMinRoot, max(a, b, k) { return -smoothMinRoot(-a, -b, k); } };
-// export const SMOOTHING_METHOD_SIGMOID = { min: smoothMinSigmoid, max(a, b, k) { return -smoothMinSigmoid(-a, -b, k); } };
-// export const SMOOTHING_METHOD_QUADRATIC = { min: smoothMinQuadratic, max(a, b, k) { return -smoothMinQuadratic(-a, -b, k); } };
-// export const SMOOTHING_METHOD_CUBIC = { min: smoothMinCubic, max(a, b, k) { return -smoothMinCubic(-a, -b, k); } };
-// export const SMOOTHING_METHOD_QUARTIC = { min: smoothMinQuartic, max(a, b, k) { return -smoothMinQuartic(-a, -b, k); } };
-// export const SMOOTHING_METHOD_CIRCULAR = { min: smoothMinCircular, max(a, b, k) { return -smoothMinCircular(-a, -b, k); } };
-// export const SMOOTHING_METHOD_CIRCULAR_GEOMETRICAL = { min: smoothMinCircularGeometrical, max(a, b, k) { return -smoothMinCircularGeometrical(-a, -b, k); } };
+export class SmoothingMethodNone {
+    min(a, b) { return Math.min(a, b); }
+    max(a, b) { return Math.max(a, b); }
+}
 
-export const SMOOTHING_METHOD_EXP = { min: smoothMinExp, max: smoothMaxExp };
-export const SMOOTHING_METHOD_ROOT = { min: smoothMinRoot, max: smoothMaxRoot };
-export const SMOOTHING_METHOD_SIGMOID = { min: smoothMinSigmoid, max: smoothMaxSigmoid };
-export const SMOOTHING_METHOD_QUADRATIC = { min: smoothMinQuadratic, max: smoothMaxQuadratic };
-export const SMOOTHING_METHOD_CUBIC = { min: smoothMinCubic, max: smoothMaxCubic };
-export const SMOOTHING_METHOD_QUARTIC = { min: smoothMinQuartic, max: smoothMaxQuartic };
-export const SMOOTHING_METHOD_CIRCULAR = { min: smoothMinCircular, max: smoothMaxCircular };
-export const SMOOTHING_METHOD_CIRCULAR_GEOMETRICAL = { min: smoothMinCircularGeometrical, max: smoothMaxCircularGeometrical };
+export class SmoothingMethodExp {
+    constructor(k) { this.k = k; }
+    min(a, b) { return smoothMinExp(a, b, this.k); }
+    max(a, b) { return smoothMaxExp(a, b, this.k); }
+}
 
-export function box(size_x = 20, size_y = 20, size_z = 20, corner_radius = 0) { return new BoxSignedDistanceField3(size_x, size_y, size_z, corner_radius); }
-export function boxFrame(size_x = 20, size_y = 20, size_z = 20, frame_size = 5) { return new BoxFrameSignedDistanceField3(size_x, size_y, size_z, frame_size); }
-export function sphere(radius = 5) { return new SphereSignedDistanceField3(radius); }
-export function torus(radius_outer = 20, radius_inner = 5) { return new TorusSignedDistanceField3(radius_outer, radius_inner); }
-export function cylinder(radius = 10, height = Infinity) { return new CylinderSignedDistanceField3(radius, height); }
-export function plane(plane_ = new Plane()) { return new PlaneSignedDistanceField3(plane_); }
+export class SmoothingMethodRoot {
+    constructor(k) { this.k = k; }
+    min(a, b) { return smoothMinRoot(a, b, this.k); }
+    max(a, b) { return smoothMaxRoot(a, b, this.k); }
+}
+
+export class SmoothingMethodSigmoid {
+    constructor(k) { this.k = k; }
+    min(a, b) { return smoothMinSigmoid(a, b, this.k); }
+    max(a, b) { return smoothMaxSigmoid(a, b, this.k); }
+}
+
+export class SmoothingMethodQuadratic {
+    constructor(k) { this.k = k; }
+    min(a, b) { return smoothMinQuadratic(a, b, this.k); }
+    max(a, b) { return smoothMaxQuadratic(a, b, this.k); }
+}
+
+export class SmoothingMethodCubic {
+    constructor(k) { this.k = k; }
+    min(a, b) { return smoothMinCubic(a, b, this.k); }
+    max(a, b) { return smoothMaxCubic(a, b, this.k); }
+}
+
+export class SmoothingMethodQuartic {
+    constructor(k) { this.k = k; }
+    min(a, b) { return smoothMinQuartic(a, b, this.k); }
+    max(a, b) { return smoothMaxQuartic(a, b, this.k); }
+}
+
+export class SmoothingMethodCircular {
+    constructor(k) { this.k = k; }
+    min(a, b) { return smoothMinCircular(a, b, this.k); }
+    max(a, b) { return smoothMaxCircular(a, b, this.k); }
+}
+
+export class SmoothingMethodCircularGeometrical {
+    constructor(k) { this.k = k; }
+    min(a, b) { return smoothMinCircularGeometrical(a, b, this.k); }
+    max(a, b) { return smoothMaxCircularGeometrical(a, b, this.k); }
+}
+
+export class SmoothingMethodChamfer {
+    constructor(radius) { this.radius = radius; }
+    
+    min(a, b) {
+        const m = Math.min(a, b);
+
+        if (a < this.radius && b < this.radius) {
+            return Math.min(m, a + b - this.radius);
+        } else {
+            return m;
+        }
+    }
+
+    max(a, b) {
+        const m = Math.max(a, b);
+
+        if (a > -this.radius && b > -this.radius) {
+            return Math.max(m, a + b + this.radius);
+        } else {
+            return m;
+        }
+    }
+}
+
+export class SmoothingMethodCombine {
+    constructor(... methods) {
+        this.methods = methods;
+    }
+
+    min(a, b) { return this.methods.reduce((value, method) => method.min(value, b), a); }
+    max(a, b) { return this.methods.reduce((value, method) => method.max(value, b), a); }
+}
+
+export const SMOOTHING_METHOD_DEFAULT_NONE = new SmoothingMethodNone();
+export const SMOOTHING_METHOD_DEFAULT_EXP = new SmoothingMethodExp(0.5);
+export const SMOOTHING_METHOD_DEFAULT_ROOT = new SmoothingMethodRoot(0.5);
+export const SMOOTHING_METHOD_DEFAULT_SIGMOID = new SmoothingMethodSigmoid(0.5);
+export const SMOOTHING_METHOD_DEFAULT_QUADRATIC = new SmoothingMethodQuadratic(0.5);
+export const SMOOTHING_METHOD_DEFAULT_CUBIC = new SmoothingMethodCubic(0.5);
+export const SMOOTHING_METHOD_DEFAULT_QUARTIC = new SmoothingMethodQuartic(0.5);
+export const SMOOTHING_METHOD_DEFAULT_CIRCULAR = new SmoothingMethodCircular(0.5);
+export const SMOOTHING_METHOD_DEFAULT_CIRCULAR_GEOMETRICAL = new SmoothingMethodCircularGeometrical(0.5);
 
 const _SAMPLE_OCTREE_FULL = new SampleOctreeFull();
 const _SAMPLE_OCTREE_EMPTY = new SampleOctreeEmpty();
