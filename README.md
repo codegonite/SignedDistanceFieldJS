@@ -28,16 +28,22 @@ field = field
     .setSmoothingMethod(new sdf.SmoothingMethodQuadratic(0.10));
 
 field = field.difference(
-    sdf.cylinder(6, 20),
-    sdf.cylinder(6, 20).rotateX(Math.PI / 2),
-    sdf.cylinder(6, 20).rotateY(Math.PI / 2),
-).setSmoothingMethod(new sdf.SmoothingMethodQuadratic(0.5))
+    sdf.cylinder(5, 40).union(
+        sdf.cylinder(5, 40).rotateX(Math.PI / 2),
+        sdf.cylinder(5, 40).rotateY(Math.PI / 2),
+    ).setSmoothingMethod(new sdf.SmoothingMethodQuadratic(0.10)),
+).setSmoothingMethod(
+    new sdf.SmoothingMethodCombine(
+        new sdf.SmoothingMethodChamfer(1),
+        new sdf.SmoothingMethodQuadratic(0.10)
+    )
+);
 
 const mesh = sdf.triangulateSignedDistanceField(
     field, // The signed distance field to sample from
-    field.bounding_box, // The bounding box which to sample within
+    field.boundingBox, // The bounding box which to sample within
     8, // The subdivision count of the root node / maximum depth for the octree
-    null // Merge theshold for adaptive sampling
+    0.01 // Merge threshold for adaptive sampling
 );
 
 // Create a buffer representing the mesh in stl file format

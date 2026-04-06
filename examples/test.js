@@ -21,9 +21,9 @@ field = field.difference(
 
 const mesh = sdf.triangulateSignedDistanceField(
     field, // The signed distance field to sample from
-    field.bounding_box, // The bounding box which to sample within
+    field.boundingBox, // The bounding box which to sample within
     8, // The subdivision count of the root node / maximum depth for the octree
-    0.01 // Merge theshold for adaptive sampling
+    0.01 // Merge threshold for adaptive sampling
 );
 
 // Create a buffer representing the mesh in stl file format
